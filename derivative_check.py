@@ -3,6 +3,7 @@ import math
 torch.autograd.set_detect_anomaly(True, check_nan=False)
 torch.set_default_dtype(torch.float32)
 
+# Note that RTOL can be much lower with 64 bit floats
 
 def main():
     # Constants 
@@ -158,7 +159,10 @@ def r_to_s(r, lam, x_avg, x_diff ):
 # this will be used once per radius in a system, so once in a two
 # body system, three times in a three body system, six times in a four 
 # body system, et cetera
-def chebyshev(s, n):
+def chebyshev(s, max_order):
+    # Note that these are making a tensor of 0 dimensions,
+    # with value 1 and 0, not initializing empty tensors of shape 
+    # 1 and zero
     o = torch.tensor(1.0, dtype=s.dtype, device=s.device)
     z = torch.tensor(0.0, dtype=s.dtype, device=s.device)
 
@@ -168,14 +172,21 @@ def chebyshev(s, n):
     U = [o, 2*s]
 
     # Build remainder of vectors 
-    for k in range(2, n): 
+    # Note that including up to the nth order polynomial 
+    # Will make a list of n+1 elements 
+    for k in range(2, max_order+1): 
         T.append(2*s*T[k-1]   - T[k-2])
         U.append(2*s*U[k-1]   - U[k-2])
         dT.append(k * U[k-1])
         # there are techncially some edge cases here 
         # But that should never happen with floats
         ddT.append(k * ((k+1) * T[k] - U[k]) / (s**2 - 1))
-    return torch.stack(T[:n]), torch.stack(dT[:n]), torch.stack(ddT[:n])
+    # torch.stack takes a set of tensors and adds a dimension by "stacking"
+    # them along it- so our list of 0d tensors becomes a 1d tensor of shape 
+    # max_order
+    
+    return torch.stack(T[:max_order+1]), torch.stack(dT[:max_order+1]), torch.stack(ddT[:max_order+1])
+    
 
 
 # Calculates 2-body energy from a known radius
@@ -218,6 +229,8 @@ def e3b(n, C, r1, r2, r3, r_cut_in, r_cut_out, d, lam, x_avg, x_diff):
     
     # E(r), d/dr E(r), d2/dr2 E(r)
     E = fs1*fs2*fs3 * torch.einsum('abc, a, b, c->', C, T1, T2, T3)
+
+
     dE1 = (fs1*fs2*fs3*ds1*torch.einsum('abc, a, b, c->', C, dT1, T2, T3) 
            + dfs1*fs2*fs3*torch.einsum('abc, a, b, c->', C, T1, T2, T3))
 
