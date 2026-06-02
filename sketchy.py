@@ -6,7 +6,9 @@ from numpy.polynomial import chebyshev as C
 torch.set_default_dtype(torch.double)
 
 
-class Energy(nn.Module):
+class Energy(nn.Module): 
+    #TODO Need to change the default inputs to r and add the r_to_x for x_avg 
+    # and stuff
     def __init__(self, n, lam, x_cut_min, x_cut_max, f0, A, init=None):
         super().__init__()
         self.x_diff = 0.5 * abs(x_cut_min + x_cut_max)
@@ -79,7 +81,7 @@ class Energy(nn.Module):
         return #E, dE, ddE
 
 
-def _demo():
+#def _demo():
 
 
 if __name__ == "__main__":
